@@ -58,7 +58,7 @@ router.put("/:code", async function (req, res, next) {
     if (result.rowCount === 0) {
         throw new ExpressError(`Couldn't update company with code '${code}' because no such company exists`, 400);
     }
-    return res.status(200).json(result.rows[0]);
+    return res.status(200).json({ company: result.rows[0]});
   } catch (err) {
     return next(err);
   }
