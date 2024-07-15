@@ -15,21 +15,21 @@ router.get("/", async function (req, res, next) {
   }
 });
 
-router.get("/:code", async function (req, res, next) {
-  try {
-    const code = req.params.code;
-    const result = await db.query(
-      `SELECT code, name, description
-            FROM companies
-            WHERE code = $1`,
-      [code]
-    );
+// router.get("/:code", async function (req, res, next) {
+//   try {
+//     const { code } = req.params;
+//     const result = await db.query(
+//       `SELECT code, name, description
+//             FROM companies
+//             WHERE code = $1`,
+//       [code]
+//     );
 
-    return res.status(200).json({ company: result.rows[0] });
-  } catch (err) {
-    return next(err);
-  }
-});
+//     return res.status(200).json({ company: result.rows[0] });
+//   } catch (err) {
+//     return next(err);
+//   }
+// });
 
 router.post("/", async function (req, res, next) {
   try {
@@ -66,7 +66,7 @@ router.put("/:code", async function (req, res, next) {
 
 router.delete("/:code", async function (req, res, next) {
     try {
-        const code = req.params.code;
+        const { code } = req.params;
         const result = await db.query(
             `DELETE FROM companies
             WHERE code = $1`,
@@ -76,6 +76,34 @@ router.delete("/:code", async function (req, res, next) {
             throw new ExpressError(`Couldn't delete company with code '${code}' because it doesn't exist`, 404);
         }
         return res.status(200).json({message: "deleted"});
+    } catch (err) {
+        return next(err);
+    }
+});
+
+router.get("/:code", async function (req, res, next) {
+    try {
+        const { code } = req.params;
+        const companyResult = await db.query(
+            `SELECT code, name, description
+            FROM companies
+            WHERE code = $1`,
+            [code]
+        );
+        if (companyResult.rowCount === 0) {
+            throw new ExpressError(`Couldn't locate company with code '${code}'`, 404);
+        }
+        const invoiceResult = await db.query(
+            `SELECT id, amt, paid, add_date, paid_date FROM invoices
+            WHERE comp_code = $1`,
+            [code]
+        );
+       
+        const company = companyResult.rows[0];
+        company.invoices = invoiceResult.rows;
+
+        return res.status(200).json({ company: company });
+        
     } catch (err) {
         return next(err);
     }

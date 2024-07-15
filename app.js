@@ -10,7 +10,7 @@ const ExpressError = require("./expressError")
 
 app.use(express.json());
 app.use('/companies', companiesRoutes);
-// app.use('/invoices', invoicesRoutes);
+app.use('/invoices', invoicesRoutes);
 
 
 /** 404 handler */
