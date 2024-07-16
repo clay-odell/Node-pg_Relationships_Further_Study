@@ -67,18 +67,36 @@ router.post("/", async function (req, res, next) {
 router.put("/:id", async function (req, res, next) {
   try {
     const { id } = req.params;
-    const { amt } = req.body;
+    const { amt, paid } = req.body;
+    const currentInvoiceRes = await db.query(
+      `SELECT paid FROM invoices
+        WHERE id = $1`,
+      [id]
+    );
+    if (currentInvoiceRes.rowCount === 0) {
+      throw new ExpressError("Invoice not found", 404);
+    }
+    const currentPaidStatus = currentInvoiceRes.rows[0].paid;
+    let paidDate = null;
+    if (!currentPaidStatus && paid) {
+      paidDate = new Date();
+    } else if (currentPaidStatus && !paid) {
+      paidDate = null;
+    } else {
+      const currentPaidDateRes = await db.query(
+        `SELECT paid_date FROM invoices where id = $1`,
+        [id]
+      );
+      paidDate = currentPaidDateRes.rows[0].paid_date;
+    }
     const result = await db.query(
-      `UPDATE invoices SET amt = $1
-        WHERE id = $2
+      `UPDATE invoices SET amt = $1, paid =$2, paid_date = $3
+        WHERE id = $4
         RETURNING id, comp_code, amt, paid, add_date, paid_date`,
-      [amt, id]
+      [amt, paid, paidDate, id]
     );
     if (result.rowCount === 0) {
-      throw new ExpressError(
-        "Invoice could not be updated because id doesn't exist",
-        404
-      );
+      throw new ExpressError("Invoice could not be found", 404);
     }
     return res.status(200).json({ invoice: result.rows[0] });
   } catch (err) {
@@ -86,21 +104,21 @@ router.put("/:id", async function (req, res, next) {
   }
 });
 
-router.delete("/:id", async function(req, res, next) {
-    try {
-        const { id } = req.params;
-        const result = await db.query(
-            `DELETE FROM invoices
+router.delete("/:id", async function (req, res, next) {
+  try {
+    const { id } = req.params;
+    const result = await db.query(
+      `DELETE FROM invoices
             WHERE id = $1`,
-            [id]
-        );
-        if (result.rowCount === 0) {
-            throw new ExpressError("Invoice could not be found", 404);
-        }
-        return res.status(200).json({ message: "deleted" });
-    } catch (err) {
-        return next(err);
+      [id]
+    );
+    if (result.rowCount === 0) {
+      throw new ExpressError("Invoice could not be found", 404);
     }
+    return res.status(200).json({ message: "deleted" });
+  } catch (err) {
+    return next(err);
+  }
 });
 
 module.exports = router;

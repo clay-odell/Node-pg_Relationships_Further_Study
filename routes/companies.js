@@ -1,6 +1,7 @@
 const express = require("express");
 const db = require("../db");
 const ExpressError = require("../expressError");
+const slugify = require('slugify');
 const router = express.Router();
 
 router.get("/", async function (req, res, next) {
