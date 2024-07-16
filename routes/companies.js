@@ -34,7 +34,12 @@ router.get("/", async function (req, res, next) {
 
 router.post("/", async function (req, res, next) {
   try {
-    const { code, name, description } = req.body;
+    let { code, name, description } = req.body;
+    if (!code && name) {
+        code = slugify(name, {
+            lower: true, strict: true
+        });
+    }
     const result = await db.query(
       `INSERT INTO companies (code, name, description)
             VALUES ($1, $2, $3)
@@ -99,9 +104,17 @@ router.get("/:code", async function (req, res, next) {
             WHERE comp_code = $1`,
             [code]
         );
-       
+        const industryResult = await db.query(
+            `SELECT i.code, i.industry
+            FROM industries AS i
+            JOIN company_industries AS ci
+            ON i.code = ci.ind_code
+            WHERE ci.comp_code = $1`,
+            [code]
+        );
         const company = companyResult.rows[0];
         company.invoices = invoiceResult.rows;
+        company.industries = industryResult.rows;
 
         return res.status(200).json({ company: company });
         
